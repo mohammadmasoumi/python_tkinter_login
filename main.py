@@ -4,13 +4,14 @@ https://wiki.tcl-lang.org/page/tkinter.Label
 """
 from tkinter import *
 import sqlite3
+import hashlib
 
 ROOT_GEOMETRY = "500x500"
 ROOT_TITLE = "Registration Form"
 
 
 class RegistrationForm:
-    __LABELS = ('FirstName', 'LastName', 'Email', 'Gender', 'Country', 'Language')
+    __LABELS = ('FirstName', 'LastName', 'Username', 'Password', 'Country', 'Language')
 
     def __init__(self):
         """
@@ -32,18 +33,27 @@ class RegistrationForm:
                 data.update({key.lower(): value.get()})
 
         if is_valid:
-            # check user existance
+            # check user existence
             cursor = self.__conn.cursor()
-            cursor.execute(f"SELECT * FROM `users` WHERE `username` = {data.get('username')}")
+            cursor.execute(f"SELECT * FROM `users` WHERE `username` = (?)", (data.get('username'),))
             if cursor.fetchone() is not None:
                 print("Username has been already taken.")
             else:
-                cursor.execute(
-                    f"INSERT INTO `user` (firstname, lastname, username, password, gender, country, language) VALUES({data.get('firstname')}, {data.get('lastname')}, {data.get('username')}, {data.get('password')}, {data.get('gender')}, {data.get('country')}, {data.get('language')})")
+                firstname = data.get('firstname')
+                lastname = data.get('lastname')
+                username = data.get('username')
+                password = hashlib.md5(data.get('password', '').encode('utf-8')).hexdigest()
+                country = data.get('country')
+                language = data.get('language')
+
+                print(firstname, lastname, username, password, country, language)
+
+                cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
+                               (firstname, lastname, username, password, country, language))
                 self.__conn.commit()
 
                 for value in self._entries.values():
-                    value.set("")
+                    value.insert(0, "")
 
                 cursor.close()
                 self.__conn.close()
